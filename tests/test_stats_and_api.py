@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import httpx
 import pytest
+from sqlalchemy import select
 
 from pulse import api, checker, stats
 from pulse.models import Check, Monitor
@@ -76,3 +77,23 @@ async def test_the_demo_limit_is_enforced(client, monkeypatch):
 
 async def test_unknown_monitor_is_404(client):
     assert (await client.get("/api/monitors/999/checks")).status_code == 404
+
+
+async def test_built_in_demo_monitors_cannot_be_removed(client, monkeypatch):
+    monkeypatch.setattr(api.settings, "seed_demo", True)
+    await api.seed_demo()
+    monitors = (await client.get("/api/monitors")).json()
+    assert {m["url"] for m in monitors} == api.DEMO_URLS and all(m["built_in"] for m in monitors)
+    assert (await client.delete(f"/api/monitors/{monitors[0]['id']}")).status_code == 403
+
+
+async def test_missing_demo_monitors_come_back_and_old_visitor_monitors_go(sessions, monkeypatch):
+    monkeypatch.setattr(api.settings, "seed_demo", True)
+    async with sessions() as s, s.begin():
+        s.add(Monitor(name="Old visitor", url="https://old.example/", created_at=checker.now() - timedelta(days=2)))
+        s.add(Monitor(name="New visitor", url="https://new.example/"))
+    await api.seed_demo()
+    async with sessions() as s:
+        urls = set((await s.scalars(select(Monitor.url))).all())
+    assert api.DEMO_URLS <= urls
+    assert "https://new.example/" in urls and "https://old.example/" not in urls

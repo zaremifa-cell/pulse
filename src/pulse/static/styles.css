@@ -46,3 +46,4 @@ button.link { min-height: 36px; padding: 0 4px; background: none; color: var(--m
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .alert { margin: 0; padding: 12px 16px; background: var(--bad-bg); color: var(--down); }
 footer { margin-top: 32px; }
+.builtin { margin-left: auto; }

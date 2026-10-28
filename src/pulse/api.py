@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,11 +30,19 @@ DEMO_MONITORS = [
 ]
 
 
+DEMO_URLS = {url for _, url in DEMO_MONITORS}
+VISITOR_MONITOR_TTL = timedelta(hours=24)
+
+
 async def seed_demo() -> None:
+    """Keep the public demo usable: the built-in monitors always exist, and monitors added by
+    visitors are removed after a day so the demo never fills up or drifts."""
     async with SessionFactory() as session, session.begin():
-        if await session.scalar(select(func.count()).select_from(Monitor)):
-            return
-        session.add_all(Monitor(name=name, url=url) for name, url in DEMO_MONITORS)
+        existing = set((await session.scalars(select(Monitor.url))).all())
+        session.add_all(Monitor(name=name, url=url) for name, url in DEMO_MONITORS if url not in existing)
+        await session.execute(
+            delete(Monitor).where(Monitor.url.not_in(DEMO_URLS), Monitor.created_at < checker.now() - VISITOR_MONITOR_TTL)
+        )
 
 
 @contextlib.asynccontextmanager
@@ -93,6 +101,7 @@ class MonitorOut(BaseModel):
     uptime_7d: float | None
     p95_ms_24h: int | None
     timeline: list[str]
+    built_in: bool
 
 
 async def describe(session: AsyncSession, monitor: Monitor, at: datetime) -> MonitorOut:
@@ -112,6 +121,7 @@ async def describe(session: AsyncSession, monitor: Monitor, at: datetime) -> Mon
         uptime_7d=await stats.uptime(session, monitor.id, at - timedelta(days=7)),
         p95_ms_24h=await stats.p95_ms(session, monitor.id, at - timedelta(hours=24)),
         timeline=await stats.timeline(session, monitor.id, at),
+        built_in=settings.seed_demo and monitor.url in DEMO_URLS,
     )
 
 
@@ -128,6 +138,8 @@ async def create_monitor(data: MonitorIn, session: AsyncSession = Depends(get_se
         await assert_public(data.url)
     except UnsafeUrl as exc:
         raise HTTPException(422, str(exc)) from exc
+    if settings.seed_demo:
+        await seed_demo()
     if await session.scalar(select(func.count()).select_from(Monitor)) >= settings.max_monitors:
         raise HTTPException(409, f"The demo is limited to {settings.max_monitors} monitors. Delete one first.")
     monitor = Monitor(**data.model_dump())
@@ -144,6 +156,8 @@ async def delete_monitor(monitor_id: int, session: AsyncSession = Depends(get_se
     monitor = await session.get(Monitor, monitor_id)
     if not monitor:
         raise HTTPException(404, "Monitor not found.")
+    if settings.seed_demo and monitor.url in DEMO_URLS:
+        raise HTTPException(403, "The built-in demo monitors can't be removed. Add your own and remove that one.")
     await session.delete(monitor)
     await session.commit()
 

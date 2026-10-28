@@ -53,7 +53,7 @@ function renderMonitors(monitors) {
       el('span', {}, m.p95_ms_24h === null ? 'p95 —' : `p95 ${m.p95_ms_24h} ms`),
       el('span', { class: 'muted' }, ago(m.last_checked_at)),
       m.state !== 'up' && m.last_error ? el('span', { class: 'err' }, m.last_error) : null,
-      el('button', { class: 'link', onclick: () => remove(m) }, 'Remove')),
+      m.built_in ? el('span', { class: 'muted small builtin' }, 'Built-in') : el('button', { class: 'link', onclick: () => remove(m) }, 'Remove')),
   )));
 }
 

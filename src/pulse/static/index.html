@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pulse — status</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <span class="brand">Pulse <span class="muted">status</span></span>
+      <span id="summary" class="summary" role="status">Loading…</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="card-head">
+          <h2>Monitors</h2>
+          <span class="muted small">Checked every minute · a site is down after 3 failed checks in a row</span>
+        </div>
+        <ul id="monitors" class="monitors" aria-live="polite"></ul>
+        <p class="legend muted small">
+          <span class="key up"></span> up <span class="key down"></span> failed check <span class="key none"></span> no data (monitor asleep or not checked yet) · last 24 hours
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Incidents</h2>
+        <ul id="incidents" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Add a monitor</h2>
+        <form id="add" class="row">
+          <label>Name<input name="name" required maxlength="80" placeholder="My site"></label>
+          <label class="grow">Address<input name="url" type="url" required placeholder="https://example.org/"></label>
+          <button type="submit">Add</button>
+        </form>
+        <p id="add-error" class="alert" role="alert" hidden></p>
+        <p class="muted small">Public addresses only: private networks and local addresses are refused.</p>
+      </section>
+    </main>
+
+    <footer class="muted small">
+      Demo on a free server that sleeps when unused; gaps while it slept show as "no data" and are not counted in uptime.
+      <a href="/docs">API</a> · <a href="https://github.com/zaremifa-cell/pulse">Source</a>
+    </footer>
+  </div>
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>

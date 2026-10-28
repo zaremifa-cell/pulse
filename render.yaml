@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: pulse
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /up
+    envVars:
+      - key: DATABASE_URL
+        sync: false

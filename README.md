@@ -6,7 +6,7 @@ goes down and closes it when it comes back. A public status page shows each site
 
 Built with **Python 3.14, FastAPI, SQLAlchemy 2 (async), PostgreSQL, Alembic and httpx**.
 
-API docs are served at `/docs`.
+**Live demo:** https://pulse-qrke.onrender.com (free server: the first visit can take up to a minute) · API docs at `/docs`
 
 ## How it decides a site is down
 

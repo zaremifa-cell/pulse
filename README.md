@@ -6,7 +6,7 @@ goes down and closes it when it comes back. A public status page shows each site
 
 Built with **Python 3.14, FastAPI, SQLAlchemy 2 (async), PostgreSQL, Alembic and httpx**.
 
-**Live demo:** https://pulse-zaremifa.onrender.com · API docs at `/docs`
+API docs are served at `/docs`.
 
 ## How it decides a site is down
 

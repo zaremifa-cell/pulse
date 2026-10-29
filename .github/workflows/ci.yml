@@ -25,3 +25,28 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run alembic upgrade head
       - run: uv run pytest -q
+
+  # Ships the code to AWS Lambda after the tests pass on main. No AWS keys are stored in GitHub:
+  # the job exchanges its OIDC token for a short-lived session of a role that can only update
+  # these two functions (see infra/github.tf).
+  deploy-aws:
+    needs: tests
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: infra/build.sh
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      - name: Update both functions
+        run: |
+          for fn in pulse-http pulse-check; do
+            aws lambda update-function-code --function-name "$fn" --zip-file fileb://infra/build/pulse.zip --output text --query LastUpdateStatus
+            aws lambda wait function-updated-v2 --function-name "$fn"
+          done
